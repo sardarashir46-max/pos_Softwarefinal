@@ -1,0 +1,148 @@
+
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <title>MyPOS Receipt #7</title>
+
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                background: #f1f5f9;
+                padding: 25px;
+                color: #1e293b;
+            }
+
+            .receipt {
+                max-width: 650px;
+                margin: auto;
+                background: white;
+                padding: 30px;
+                border-radius: 12px;
+                box-shadow: 0 4px 18px #00000012;
+            }
+
+            h1 {
+                text-align: center;
+                margin-bottom: 5px;
+            }
+
+            .subtitle {
+                text-align: center;
+                color: #64748b;
+            }
+
+            .details {
+                margin: 25px 0;
+                line-height: 1.8;
+            }
+
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 15px;
+            }
+
+            th, td {
+                padding: 12px 6px;
+                text-align: left;
+                border-bottom: 1px solid #e2e8f0;
+            }
+
+            th {
+                background: #f8fafc;
+            }
+
+            .total {
+                text-align: right;
+                font-size: 22px;
+                font-weight: bold;
+                margin-top: 25px;
+            }
+
+            .thank-you {
+                text-align: center;
+                margin-top: 35px;
+                color: #64748b;
+            }
+
+            .print-button {
+                display: block;
+                margin: 25px auto 0;
+                padding: 12px 24px;
+                border: none;
+                border-radius: 6px;
+                background: #2563eb;
+                color: white;
+                cursor: pointer;
+                font-size: 16px;
+            }
+
+            @media print {
+                body {
+                    background: white;
+                    padding: 0;
+                }
+
+                .receipt {
+                    box-shadow: none;
+                    max-width: 100%;
+                    padding: 10px;
+                }
+
+                .print-button {
+                    display: none;
+                }
+            }
+        </style>
+    </head>
+
+    <body>
+        <div class="receipt">
+            <h1>MyPOS</h1>
+            <p class="subtitle">Point of Sale Receipt</p>
+
+            <div class="details">
+                <strong>Sale ID:</strong> 7<br>
+                <strong>Date & Time:</strong> 20-10-2026 04:16:31 PM<br>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Qty</th>
+                        <th>Price</th>
+                        <th>Subtotal</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    
+            <tr>
+                <td>coke again</td>
+                <td>1</td>
+                <td>Rs. 123.00</td>
+                <td>Rs. 123.00</td>
+            </tr>
+            
+                </tbody>
+            </table>
+
+            <div class="total">
+                Total: Rs. 123.00
+            </div>
+
+            <p class="thank-you">
+                Thank you for shopping with us!
+            </p>
+
+            <button class="print-button" onclick="window.print()">
+                Print Receipt
+            </button>
+        </div>
+    </body>
+    </html>
+    
