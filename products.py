@@ -336,10 +336,7 @@ def create_products_page(parent):
         make_entry(form_card, purchase_price_var),
         3, 1, ipady=5
     )
-    add_field(
-        "Current Stock *", make_entry(form_card, stock_var),
-        3, 2, ipady=5
-    )
+    
 
     image_row = tk.Frame(form_card, bg=CARD)
     add_field("Product Image", image_row, 3, 3)

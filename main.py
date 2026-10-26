@@ -11,7 +11,7 @@ from datetime import datetime
 
 import database
 from products import create_products_page
-from categories import create_categories_page, initialize_categories_table
+from categories import create_categories_page
 from login import run_login, initialize_users_table
 from billing import create_billing_page
 from sales_history import create_sales_history_page
@@ -65,7 +65,7 @@ class MyPOSApp:
 
         # Keep existing database and records.
         database.initialize_database()
-        initialize_categories_table()
+       
 
         self.configure_styles()
         self.create_layout()

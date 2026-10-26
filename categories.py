@@ -41,21 +41,6 @@ MAX_CATEGORY_LENGTH = 60
 # so existing products and sales are never touched.
 # ============================================================
 
-def initialize_categories_table():
-    """Create the categories table if it is missing (safe to repeat)."""
-
-    with database.get_connection() as connection:
-        connection.execute("""
-            CREATE TABLE IF NOT EXISTS categories (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL UNIQUE COLLATE NOCASE,
-                is_active INTEGER NOT NULL DEFAULT 1
-                    CHECK(is_active IN (0, 1)),
-                created_at TEXT DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-
-
 def _clean_name(name):
     """Trim spaces and validate the category name."""
 
@@ -78,9 +63,10 @@ def get_all_categories():
 
     with database.get_connection() as connection:
         return connection.execute("""
-            SELECT id, name, is_active, created_at
+            SELECT cat_id, name, is_active, created_at, updated_at
             FROM categories
-            ORDER BY id ASC
+            WHERE is_deleted = 0
+            ORDER BY cat_id ASC
         """).fetchall()
 
 
@@ -89,9 +75,9 @@ def get_category(category_id):
 
     with database.get_connection() as connection:
         return connection.execute("""
-            SELECT id, name, is_active, created_at
+            SELECT cat_id, name, is_active, created_at, updated_at
             FROM categories
-            WHERE id = ?
+            WHERE cat_id = ? AND is_deleted = 0
         """, (category_id,)).fetchone()
 
 
@@ -102,8 +88,13 @@ def add_category(name, is_active=True):
 
     with database.get_connection() as connection:
         connection.execute("""
-            INSERT INTO categories (name, is_active)
-            VALUES (?, ?)
+            INSERT INTO categories (
+                name,
+                is_active,
+                created_at,
+                updated_at
+            )
+            VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
         """, (name, 1 if is_active else 0))
 
 
@@ -115,8 +106,8 @@ def update_category(category_id, name, is_active):
     with database.get_connection() as connection:
         cursor = connection.execute("""
             UPDATE categories
-            SET name = ?, is_active = ?
-            WHERE id = ?
+            SET name = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE cat_id = ? AND is_deleted = 0
         """, (name, 1 if is_active else 0, category_id))
 
         if cursor.rowcount == 0:
@@ -128,8 +119,9 @@ def delete_category(category_id):
 
     with database.get_connection() as connection:
         cursor = connection.execute("""
-            DELETE FROM categories
-            WHERE id = ?
+            UPDATE categories
+            SET is_deleted = 1, updated_at = CURRENT_TIMESTAMP
+            WHERE cat_id = ? AND is_deleted = 0
         """, (category_id,))
 
         if cursor.rowcount == 0:
@@ -142,9 +134,6 @@ def delete_category(category_id):
 
 def create_categories_page(parent):
     """Create the complete categories screen."""
-
-    # Make sure the table exists even if main.py was not updated.
-    initialize_categories_table()
 
     page = tk.Frame(parent, bg=BG)
     page.pack(fill="both", expand=True)
@@ -472,7 +461,7 @@ def create_categories_page(parent):
                 tree.insert(
                     "",
                     "end",
-                    iid=str(category["id"]),   # real ID stays here
+                    iid=str(category["cat_id"]),   # real ID stays here
                     tags=("even" if index % 2 == 0 else "odd",),
                     values=(
                         index + 1,
@@ -558,7 +547,7 @@ def create_categories_page(parent):
                 refresh_categories()
                 return
 
-            selected_category_id["value"] = category["id"]
+            selected_category_id["value"] = category["cat_id"]
             name_var.set(category["name"])
             status_var.set(
                 STATUS_ACTIVE if category["is_active"]

@@ -90,9 +90,31 @@ def _create_tables(connection):
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
             barcode TEXT UNIQUE,
-            price REAL NOT NULL CHECK(price >= 0),
-            stock INTEGER NOT NULL DEFAULT 0 CHECK(stock >= 0),
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            price REAL NOT NULL DEFAULT 0,
+            stock INTEGER NOT NULL DEFAULT 0,
+            purchase_price REAL NOT NULL DEFAULT 0,
+            image_path TEXT NOT NULL DEFAULT '',
+            unit TEXT NOT NULL DEFAULT 'Piece',
+            note TEXT NOT NULL DEFAULT '',
+            cat_id INTEGER,
+            sale_price REAL NOT NULL DEFAULT 0,
+            status INTEGER NOT NULL DEFAULT 1 CHECK(status IN (0, 1)),
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            is_deleted INTEGER NOT NULL DEFAULT 0 CHECK(is_deleted IN (0, 1)),
+            prod_id INTEGER
+        )
+    """)
+
+    # Table 2: categories. Existing category records are preserved.
+    connection.execute("""
+        CREATE TABLE IF NOT EXISTS categories (
+            cat_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE COLLATE NOCASE,
+            is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0, 1)),
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            is_deleted INTEGER NOT NULL DEFAULT 0 CHECK(is_deleted IN (0, 1))
         )
     """)
 
@@ -149,10 +171,17 @@ def _add_missing_product_columns(connection):
     Add the missing ones. Existing rows are kept and get defaults.
     """
 
-    # Ask the database which columns the products table has now.
-    existing_columns = set()
-    for row in connection.execute("PRAGMA table_info(products)"):
-        existing_columns.add(row["name"])
+    # Inspect and normalize the legacy column names first. SQLite's
+    # RENAME COLUMN preserves the existing rows and updates references.
+    existing_columns = {row["name"] for row in connection.execute("PRAGMA table_info(products)")}
+    if "id" not in existing_columns and "pro_id" in existing_columns:
+        connection.execute("ALTER TABLE products RENAME COLUMN pro_id TO id")
+        existing_columns.remove("pro_id")
+        existing_columns.add("id")
+    if "price" not in existing_columns and "saleprice" in existing_columns:
+        connection.execute("ALTER TABLE products RENAME COLUMN saleprice TO price")
+        existing_columns.remove("saleprice")
+        existing_columns.add("price")
 
     # Each new column and the command that adds it.
     new_columns = {
@@ -174,10 +203,33 @@ def _add_missing_product_columns(connection):
         ),
     }
 
-    # Add only the columns that are not there yet.
+    # Additional columns for the newer product schema. These are added
+    # without dropping or rebuilding the existing products table.
+    new_columns.update({
+        "cat_id": "ALTER TABLE products ADD COLUMN cat_id INTEGER",
+        "sale_price": "ALTER TABLE products ADD COLUMN sale_price REAL NOT NULL DEFAULT 0",
+        "status": "ALTER TABLE products ADD COLUMN status INTEGER NOT NULL DEFAULT 1 CHECK(status IN (0, 1))",
+        "updated_at": "ALTER TABLE products ADD COLUMN updated_at TEXT",
+        "is_deleted": "ALTER TABLE products ADD COLUMN is_deleted INTEGER NOT NULL DEFAULT 0 CHECK(is_deleted IN (0, 1))",
+        "prod_id": "ALTER TABLE products ADD COLUMN prod_id INTEGER",
+    })
+
+    # Add only columns that are missing. Existing data is not deleted.
     for column_name, add_command in new_columns.items():
         if column_name not in existing_columns:
             connection.execute(add_command)
+
+    # Fill new compatibility columns from whichever legacy column exists.
+    columns = {row["name"] for row in connection.execute("PRAGMA table_info(products)")}
+    if "id" in columns:
+        connection.execute("UPDATE products SET prod_id = id WHERE prod_id IS NULL")
+    elif "pro_id" in columns:
+        connection.execute("UPDATE products SET prod_id = pro_id WHERE prod_id IS NULL")
+    if "price" in columns:
+        connection.execute("UPDATE products SET sale_price = price WHERE sale_price = 0")
+    elif "saleprice" in columns:
+        connection.execute("UPDATE products SET sale_price = saleprice WHERE sale_price = 0")
+    connection.execute("UPDATE products SET updated_at = COALESCE(updated_at, created_at, CURRENT_TIMESTAMP)")
 
 
 def initialize_database():
